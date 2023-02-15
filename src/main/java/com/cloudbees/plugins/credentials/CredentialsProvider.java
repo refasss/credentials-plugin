@@ -216,16 +216,16 @@ public abstract class CredentialsProvider extends Descriptor<CredentialsProvider
      * The system property name corresponding to {@link #FINGERPRINT_ENABLED}.
      */
     private static final String FINGERPRINT_ENABLED_NAME = CredentialsProvider.class.getSimpleName() + ".fingerprintEnabled";
-    
+
     /**
-     * Control if the fingerprints must be used or not. 
+     * Control if the fingerprints must be used or not.
      * By default they are activated and thus allow the tracking of credentials usage.
      * In case of performance troubles in some weird situation, you can disable the behavior by setting it to {@code false}.
      */
     @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "Accessible via System Groovy Scripts")
     @Restricted(NoExternalUse.class)
     /* package-protected */ static /* not final */ boolean FINGERPRINT_ENABLED = Boolean.parseBoolean(System.getProperty(FINGERPRINT_ENABLED_NAME, "true"));
-    
+
     /**
      * Default constructor.
      */
@@ -482,7 +482,7 @@ public abstract class CredentialsProvider extends Descriptor<CredentialsProvider
                 try {
                     for (ListBoxModel.Option option : provider.getCredentialIds(
                             type, itemGroup, authentication, domainRequirements, matcher)
-                            ) {
+                    ) {
                         if (ids.add(option.value)) {
                             result.add(option);
                         }
@@ -622,7 +622,7 @@ public abstract class CredentialsProvider extends Descriptor<CredentialsProvider
                 try {
                     for (ListBoxModel.Option option : provider.getCredentialIds(
                             type, item, authentication, domainRequirements, matcher)
-                            ) {
+                    ) {
                         if (ids.add(option.value)) {
                             result.add(option);
                         }
@@ -901,6 +901,7 @@ public abstract class CredentialsProvider extends Descriptor<CredentialsProvider
             id = Util.fixNull(binding.getCredentialsId());
         }
         // non parameters or default parameter values can only come from the job's context
+        List<C> jobContextCandidates = new ArrayList<>();
         if (!isParameter || isDefaultValue) {
             // we use the default authentication of the job as those are the only ones that can be configured
             // if a different strategy is in play it doesn't make sense to consider the run-time authentication
@@ -983,8 +984,10 @@ public abstract class CredentialsProvider extends Descriptor<CredentialsProvider
      * @param run the {@link Run} to find the trigger of.
      * @return the trigger of the supplied run or {@code null} if this could not be determined.
      */
+    @Restricted(NoExternalUse.class)
     @CheckForNull
-    private static Map.Entry<User, Run<?, ?>> triggeredBy(Run<?, ?> run) {
+
+    public static Map.Entry<User, Run<?, ?>> triggeredBy(Run<?, ?> run) {
         Cause.UserIdCause cause = run.getCause(Cause.UserIdCause.class);
         if (cause != null) {
             User u = User.get(cause.getUserId(), false, Collections.emptyMap());
@@ -1186,7 +1189,7 @@ public abstract class CredentialsProvider extends Descriptor<CredentialsProvider
                                                                    @Nullable ItemGroup itemGroup,
                                                                    @Nullable Authentication authentication,
                                                                    @NonNull
-                                                                           List<DomainRequirement> domainRequirements,
+                                                                   List<DomainRequirement> domainRequirements,
                                                                    @NonNull CredentialsMatcher matcher) {
         return getCredentials(type, itemGroup, authentication, domainRequirements)
                 .stream()
@@ -1560,7 +1563,7 @@ public abstract class CredentialsProvider extends Descriptor<CredentialsProvider
                                     if (StringUtils.equals(nodeName, ((NodeCredentialsFingerprintFacet) f).getNodeName())) {
                                         start = Math.min(start, f.getTimestamp());
                                         iterator.remove();
-                                    // Remove unneeded instances
+                                        // Remove unneeded instances
                                     } else if (!jenkinsNodeNames.contains(((NodeCredentialsFingerprintFacet) f).getNodeName())) {
                                         iterator.remove();
                                     }
