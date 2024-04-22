@@ -205,16 +205,16 @@ public abstract class CredentialsProvider extends Descriptor<CredentialsProvider
      * The system property name corresponding to {@link #FINGERPRINT_ENABLED}.
      */
     private static final String FINGERPRINT_ENABLED_NAME = CredentialsProvider.class.getSimpleName() + ".fingerprintEnabled";
-    
+
     /**
-     * Control if the fingerprints must be used or not. 
+     * Control if the fingerprints must be used or not.
      * By default they are activated and thus allow the tracking of credentials usage.
      * In case of performance troubles in some weird situation, you can disable the behavior by setting it to {@code false}.
      */
     @SuppressFBWarnings(value = "MS_SHOULD_BE_FINAL", justification = "Accessible via System Groovy Scripts")
     @Restricted(NoExternalUse.class)
     /* package-protected */ static /* not final */ boolean FINGERPRINT_ENABLED = Boolean.parseBoolean(System.getProperty(FINGERPRINT_ENABLED_NAME, "true"));
-    
+
     /**
      * Default constructor.
      */
@@ -1004,7 +1004,7 @@ public abstract class CredentialsProvider extends Descriptor<CredentialsProvider
      * @return the trigger of the supplied run or {@code null} if this could not be determined.
      */
     @CheckForNull
-    private static Map.Entry<User, Run<?, ?>> triggeredBy(Run<?, ?> run) {
+    public static Map.Entry<User, Run<?, ?>> triggeredBy(Run<?, ?> run) {
         Cause.UserIdCause cause = run.getCause(Cause.UserIdCause.class);
         if (cause != null) {
             User u = User.get(cause.getUserId(), false, Collections.emptyMap());
