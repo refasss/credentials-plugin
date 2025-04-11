@@ -39,6 +39,7 @@ import hudson.model.User;
 import hudson.security.AccessControlled;
 import hudson.security.Permission;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
@@ -47,10 +48,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
-import javax.servlet.ServletException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import jakarta.servlet.ServletException;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.exception.ExceptionUtils;
 import org.jenkins.ui.icon.IconSpec;
 import org.kohsuke.accmod.Restricted;
 import org.kohsuke.accmod.restrictions.NoExternalUse;
@@ -58,8 +63,8 @@ import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.Localizable;
 import org.kohsuke.stapler.Stapler;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.StaplerResponse;
+import org.kohsuke.stapler.StaplerRequest2;
+import org.kohsuke.stapler.StaplerResponse2;
 import org.kohsuke.stapler.interceptor.RequirePOST;
 
 /**
@@ -75,6 +80,8 @@ public class CredentialsSelectHelper extends Descriptor<CredentialsSelectHelper>
      * Expose the {@link CredentialsProvider#CREATE} permission for Jelly.
      */
     public static final Permission CREATE = CredentialsProvider.CREATE;
+
+    private static final Logger LOGGER = Logger.getLogger(CredentialsSelectHelper.class.getName());
 
     /**
      * {@inheritDoc}
@@ -112,7 +119,7 @@ public class CredentialsSelectHelper extends Descriptor<CredentialsSelectHelper>
         if (context instanceof ModelObject) {
             return (ModelObject) context;
         }
-        StaplerRequest request = Stapler.getCurrentRequest();
+        StaplerRequest2 request = Stapler.getCurrentRequest2();
         if (request != null) {
             return request.findAncestorObject(ModelObject.class);
         }
@@ -132,7 +139,7 @@ public class CredentialsSelectHelper extends Descriptor<CredentialsSelectHelper>
         Set<String> urls = new HashSet<>();
         List<StoreItem> result = new ArrayList<>();
         if (context == null) {
-            StaplerRequest request = Stapler.getCurrentRequest();
+            StaplerRequest2 request = Stapler.getCurrentRequest2();
             if (request != null) {
                 context = request.findAncestorObject(ModelObject.class);
             }
@@ -193,7 +200,7 @@ public class CredentialsSelectHelper extends Descriptor<CredentialsSelectHelper>
             }
         }
         if (context == null) {
-            StaplerRequest request = Stapler.getCurrentRequest();
+            StaplerRequest2 request = Stapler.getCurrentRequest2();
             if (request != null) {
                 context = request.findAncestorObject(ModelObject.class);
             }
@@ -596,13 +603,7 @@ public class CredentialsSelectHelper extends Descriptor<CredentialsSelectHelper>
          */
         @RequirePOST
         @Restricted(NoExternalUse.class)
-        public JSONObject doAddCredentials(StaplerRequest req, StaplerResponse rsp) throws IOException, ServletException {
-            if (!store.isDomainsModifiable()) {
-                hudson.util.HttpResponses.status(400).generateResponse(req, rsp, null);
-                return new JSONObject()
-                        .element("message", "Domain is read-only")
-                        .element("notificationType", "ERROR");
-            }
+        public JSONObject doAddCredentials(StaplerRequest2 req, StaplerResponse2 rsp) throws IOException, ServletException {
             store.checkPermission(CredentialsStoreAction.CREATE);
             JSONObject data = req.getSubmittedForm();
             String domainName = data.getString("domain");
@@ -614,8 +615,34 @@ public class CredentialsSelectHelper extends Descriptor<CredentialsSelectHelper>
                         .element("notificationType", "ERROR");
             }
             store.checkPermission(CredentialsStoreAction.CREATE);
-            Credentials credentials = Descriptor.bindJSON(req, Credentials.class, data.getJSONObject("credentials"));
-            boolean credentialsWereAdded = store.addCredentials(wrapper.getDomain(), credentials);
+            boolean credentialsWereAdded;
+            try {
+                Credentials credentials = Descriptor.bindJSON(req, Credentials.class,
+                                                              data.getJSONObject("credentials"));
+                credentialsWereAdded = store.addCredentials(wrapper.getDomain(), credentials);
+            } catch (LinkageError e) {
+                /*
+                 * Descriptor#newInstanceImpl throws a LinkageError if the DataBoundConstructor or any DataBoundSetter
+                 * throw any exception other than RuntimeException implementing HttpResponse.
+                 *
+                 * Checked exceptions implementing HttpResponse like FormException are wrapped and
+                 * rethrown as HttpResponseException (a RuntimeException implementing HttpResponse) in
+                 * RequestImpl#invokeConstructor.
+                 *
+                 * This approach is taken to maintain backward compatibility, as throwing a FormException directly
+                 * from the constructor would result in a source-incompatible change, potentially breaking dependent plugins.
+                 *
+                 * Here, known exceptions are caught specifically to provide meaningful error response.
+                 */
+                Throwable rootCause = ExceptionUtils.getRootCause(e);
+                if (rootCause instanceof IOException || rootCause instanceof IllegalArgumentException
+                    || rootCause instanceof GeneralSecurityException) {
+                    LOGGER.log(Level.WARNING, "Failed to create Credentials", e);
+                    return new JSONObject().element("message", rootCause.getMessage()).element("notificationType",
+                                                                                               "ERROR");
+                }
+                throw e;
+            } 
             if (credentialsWereAdded) {
                 return new JSONObject()
                         .element("message", "Credentials created")

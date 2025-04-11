@@ -29,7 +29,7 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>4.80</version>
+    <version>5.9</version>
     <relativePath />
   </parent>
 
@@ -67,7 +67,10 @@
   <properties>
     <changelist>999999-SNAPSHOT</changelist>
     <gitHubRepo>jenkinsci/${project.artifactId}-plugin</gitHubRepo>
-    <jenkins.version>2.426.3</jenkins.version>
+    <!-- https://www.jenkins.io/doc/developer/plugin-development/choosing-jenkins-baseline/ -->
+    <jenkins.baseline>2.479</jenkins.baseline>
+    <jenkins.version>${jenkins.baseline}.1</jenkins.version>
+    <hpi.compatibleSinceVersion>1372</hpi.compatibleSinceVersion>
   </properties>
 
   <repositories>
@@ -87,8 +90,8 @@
     <dependencies>
       <dependency>
         <groupId>io.jenkins.tools.bom</groupId>
-        <artifactId>bom-2.426.x</artifactId>
-        <version>2961.v1f472390972e</version>
+        <artifactId>bom-${jenkins.baseline}.x</artifactId>
+        <version>3482.vc10d4f6da_28a_</version>
         <scope>import</scope>
         <type>pom</type>
       </dependency>
@@ -105,7 +108,10 @@
       <artifactId>configuration-as-code</artifactId>
       <optional>true</optional>
     </dependency>
-
+    <dependency>
+        <groupId>org.jenkins-ci.plugins</groupId>
+        <artifactId>bouncycastle-api</artifactId>
+    </dependency>
     <!-- test dependencies -->
     <dependency>
       <groupId>org.mockito</groupId>
@@ -119,15 +125,9 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>org.kohsuke.metainf-services</groupId>
-      <artifactId>metainf-services</artifactId>
-      <version>1.11</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>org.xmlunit</groupId>
       <artifactId>xmlunit-matchers</artifactId>
-      <version>2.9.1</version>
+      <version>2.10.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -169,12 +169,15 @@
             </goals>
           </execution>
         </executions>
+        <configuration>
+          <compatibleSinceVersion>1354</compatibleSinceVersion>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.antlr</groupId>
         <artifactId>antlr4-maven-plugin</artifactId>
         <!-- This must be compatible with the ANTLR runtime provided by Jenkins core. -->
-        <version>4.13.1</version>
+        <version>4.13.2</version>
         <configuration>
           <listener>true</listener>
           <visitor>true</visitor>
